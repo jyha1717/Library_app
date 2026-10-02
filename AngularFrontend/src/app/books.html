@@ -1,0 +1,124 @@
+<section aria-labelledby="books-title">
+  <div class="heading">
+    <div><p class="eyebrow">EXPLORE YOUR LIBRARY</p><h1 id="books-title">Book catalogue</h1><p class="intro">Find your next chapter.</p></div>
+    <div class="heading-actions">
+      <button type="button" class="secondary" (click)="load()" [disabled]="loading() || saving() || updatingArchive() || !!borrowing() || !!reserving()">Refresh</button>
+      @if (auth.user()?.role === 'Admin') { <button class="primary" (click)="open()">Add new book</button> }
+    </div>
+  </div>
+  @if (message()) { <p class="success" role="status">{{ message() }}</p> }
+  @if (eligibilityError()) { <p class="error" role="alert">{{ eligibilityError() }}</p> }
+  @if (borrowError()) { <p class="error" role="alert">{{ borrowError() }}</p> }
+  @if (loading()) {
+    <p role="status" class="notice">Loading books...</p>
+  } @else if (error()) {
+    <div class="notice"><p role="alert">{{ error() }}</p><button class="secondary" (click)="load()">Retry</button></div>
+  } @else if (books().length === 0) {
+    <div class="notice"><h2>No books yet</h2><p>Books will appear here when they are added to the catalogue.</p></div>
+  } @else {
+    <p class="count">{{ visibleBooks().length }} {{ visibleBooks().length === 1 ? 'book' : 'books' }}</p>
+    @if (!visibleBooks().length) { <p class="notice">No books match these filters. Adjust the Authors or Topics filter to see more books.</p> }
+    <p class="availability-legend"><span class="green-key">Green: copies available</span><span class="yellow-key">Yellow: on loan or reserved only</span><span class="red-key">Red: no circulating copies</span></p>
+    <div class="table-container" role="region" aria-label="Book catalogue" tabindex="0">
+      <table>
+        <thead><tr><th scope="col" [attr.aria-sort]="sortKey() === 'title' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'" aria-label="Title">Title<app-table-sort column="title" label="Title" [(sortKey)]="sortKey" [(direction)]="sortDirection" /></th><th scope="col" [attr.aria-sort]="sortKey() === 'authors' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'" aria-label="Authors">Authors<app-table-sort column="authors" label="Authors" [(sortKey)]="sortKey" [(direction)]="sortDirection" /><app-column-filter label="Filter authors" [options]="authorOptions()" [(value)]="authorFilter" /></th><th scope="col" [attr.aria-sort]="sortKey() === 'topics' ? (sortDirection() === 'asc' ? 'ascending' : 'descending') : 'none'" aria-label="Topics">Topics<app-table-sort column="topics" label="Topics" [(sortKey)]="sortKey" [(direction)]="sortDirection" /><app-column-filter label="Filter topics" [options]="topicOptions()" [(value)]="topicFilter" [interests]="auth.user()?.interests ?? []" /></th><th scope="col">Copies</th>@if (auth.user()?.role === 'Admin') { <th scope="col">Archived at <span class="timezone">(SGT)</span></th>}<th scope="col">Actions</th></tr></thead>
+        <tbody>
+          @for (book of visibleBooks(); track book._id) {
+            <tr [class.copies-available]="availability(book._id) === 'available'" [class.copies-waiting]="availability(book._id) === 'waiting'" [class.copies-unavailable]="availability(book._id) === 'unavailable'">
+              <th scope="row">{{ book.title }}</th>
+              <td>{{ book.authors.join(', ') }}</td>
+              <td><ul class="topics" aria-label="Topics">@for (topic of book.topics; track $index) { <li>{{ topic }}</li> }</ul></td>
+              <td><app-copy-counts [bookId]="book._id" [revision]="copyRevisions()[book._id] || 0" (updated)="setCopyCounts(book._id, $event)" /></td>
+              @if (auth.user()?.role === 'Admin') {
+                <td class="archive-date">{{ book.archivedAt ? (book.archivedAt | date:'dd MMM yyyy, HH:mm':'+0800') : '' }}</td>
+              }
+                <td class="catalogue-actions">
+                @if (auth.user()?.role === 'User' && reason(book._id) && !eligibilityLoading() && !eligibilityError()) { <button type="button" class="primary" [routerLink]="reason(book._id) === 'already borrowed' ? '/loans' : '/reservations'">{{ reason(book._id) === 'already borrowed' ? 'Already borrowed' : 'Already reserved' }}</button> }
+                @if (!book.archivedAt && (auth.user()?.role === 'Admin' || !['already borrowed', 'already reserved'].includes(reason(book._id))) && (availability(book._id) === 'available' || borrowing() === book._id)) {
+                  <button class="primary" (click)="openBorrow(book)" [disabled]="!!borrowing() || !!reserving() || (auth.user()?.role === 'User' && !!reason(book._id))" [attr.aria-label]="'Borrow ' + book.title">{{ borrowing() === book._id ? 'Borrowing...' : 'Borrow a copy' }}</button>
+                }
+                @if (!book.archivedAt && (auth.user()?.role === 'Admin' || !['already borrowed', 'already reserved'].includes(reason(book._id))) && availability(book._id) === 'waiting') {
+                  <button type="button" class="primary" (click)="openReserve(book)" [disabled]="!!reserving() || !!borrowing() || (auth.user()?.role === 'User' && !!reason(book._id))" [attr.aria-label]="'Reserve ' + book.title">{{ reserving() === book._id ? 'Reserving...' : 'Reserve a copy' }}</button>
+                }
+                <button class="secondary" (click)="copiesBook.set(book)" [attr.aria-label]="'View copies of ' + book.title">View copies</button>
+                @if (auth.user()?.role === 'Admin' && canArchive(book)) { <button class="secondary" (click)="openArchive(book)" [attr.aria-label]="'Manage archive status for ' + book.title">Archive status</button> }</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+@if (auth.user()) {
+  <dialog #borrowDialog aria-labelledby="borrow-title" aria-describedby="borrow-description" (cancel)="cancelBorrow($event)">
+    <h2 id="borrow-title">Confirm borrowing</h2>
+    <p class="selected-title">{{ borrowBook()?.title }}</p>
+    <p id="borrow-description">Borrow an available copy of this book for 14 days? The loan starts at the current library time.</p>
+    @if (auth.user()?.role === 'Admin') {
+      @if (loadingBorrowers()) { <p role="status">Loading users...</p> }
+      @else if (borrowerError()) { <p class="error" role="alert">{{ borrowerError() }}</p><button type="button" class="secondary" (click)="loadBorrowers(borrowBook()!)">Retry users</button> }
+      @else if (!borrowers().length) { <p>No users are available to borrow for.</p> }
+      <label for="borrower">Borrow for</label>
+      <select id="borrower" [(ngModel)]="borrowerId" [disabled]="loadingBorrowers() || !!borrowing()">
+        <option value="">Choose a user</option>
+        @for (user of borrowers(); track user.id) { <option [value]="user.id" [disabled]="!!reason(borrowBook()?._id || '', user.id)">{{ user.email }}{{ user.name ? ' / ' + user.name : '' }}{{ reason(borrowBook()?._id || '', user.id) ? ' (' + reason(borrowBook()?._id || '', user.id) + ')' : '' }}</option> }
+      </select>
+    }
+    <div class="actions">
+      <button type="button" class="secondary" autofocus [disabled]="!!borrowing()" (click)="closeBorrow()">Cancel</button>
+      @if (borrowBook(); as book) {
+        <button type="button" class="primary" [disabled]="!!borrowing() || (auth.user()?.role === 'Admin' && (!borrowerId || loadingBorrowers() || !!borrowerError() || !!reason(book._id, borrowerId)))" (click)="borrow(book)">{{ borrowing() ? 'Borrowing...' : 'Confirm borrow' }}</button>
+      }
+    </div>
+  </dialog>
+}
+@if (auth.user()?.role === 'Admin') {
+  <dialog #archiveDialog aria-labelledby="archive-dialog-title" (cancel)="cancelArchive($event)">
+    <form (ngSubmit)="saveArchive()" [attr.aria-busy]="updatingArchive()">
+      <div class="dialog-heading"><h2 id="archive-dialog-title">Archive status</h2><button type="button" class="close" aria-label="Close" [disabled]="updatingArchive()" (click)="closeArchive()">&times;</button></div>
+      <p class="selected-title">{{ selectedBook()?.title }}</p>
+      <label class="archive-toggle"><input type="checkbox" name="archived" [(ngModel)]="archiveChecked" [disabled]="updatingArchive()" />Archived</label>
+      <p class="intro">{{ archiveChecked ? 'This book will be hidden from members. Admins can still view and restore it.' : 'This book will be visible in the active catalogue for members.' }}</p>
+      @if (archiveError()) { <p class="error" role="alert">{{ archiveError() }}</p> }
+      <div class="actions"><button type="button" class="secondary" (click)="closeArchive()" [disabled]="updatingArchive()">Cancel</button><button type="submit" class="primary" [disabled]="!archiveChanged() || updatingArchive()">{{ updatingArchive() ? 'Saving...' : 'Save changes' }}</button></div>
+    </form>
+  </dialog>
+  <dialog #bookDialog aria-labelledby="dialog-title" (cancel)="cancel($event)">
+    <form (ngSubmit)="save()" [attr.aria-busy]="saving()">
+      <div class="dialog-heading"><h2 id="dialog-title">Add a new book</h2><button type="button" class="close" aria-label="Close" [disabled]="saving()" (click)="close()">&times;</button></div>
+      <p class="intro">Add the title, authors and topics to your catalogue.</p>
+      <label for="book-title">Title</label><input id="book-title" name="title" required autofocus [(ngModel)]="title" [disabled]="saving()" />
+      <label for="book-authors">Authors</label><p id="authors-help" class="help">One author per line.</p><textarea id="book-authors" name="authors" rows="3" required aria-describedby="authors-help" [(ngModel)]="authors" [disabled]="saving()"></textarea>
+      <label for="book-topics">Topics</label><p id="topics-help" class="help">One topic per line.</p><textarea id="book-topics" name="topics" rows="3" required aria-describedby="topics-help" [(ngModel)]="topics" [disabled]="saving()"></textarea>
+      @if (saveError()) { <p class="error" role="alert">{{ saveError() }}</p> }
+      <div class="actions"><button type="button" class="secondary" (click)="close()" [disabled]="saving()">Cancel</button><button type="submit" class="primary" [disabled]="!valid() || saving()">{{ saving() ? 'Saving...' : 'Add book' }}</button></div>
+    </form>
+  </dialog>
+}
+
+@if (copiesBook(); as book) { <app-copies [book]="book" (refreshed)="refreshCopyCounts(book._id)" (closed)="copiesBook.set(null)" /> }
+
+@if (auth.user()) {
+  <dialog #reserveDialog aria-labelledby="reserve-title" (cancel)="cancelReserve($event)">
+    <h2 id="reserve-title">Confirm reservation</h2>
+    <p class="selected-title">{{ reserveBook()?.title }}</p>
+    <p>Join the queue for this book? The borrower will be notified when a copy is ready for collection.</p>
+    @if (auth.user()?.role === 'Admin') {
+      @if (loadingBorrowers()) { <p role="status">Loading users...</p> }
+      @else if (borrowerError()) { <p class="error" role="alert">{{ borrowerError() }}</p><button type="button" class="secondary" (click)="loadBorrowers(reserveBook()!)">Retry users</button> }
+      @else if (!borrowers().length) { <p>No users are available to borrow for.</p> }
+      <label for="reservation-user">Reserve for</label>
+      <select id="reservation-user" [(ngModel)]="borrowerId" [disabled]="loadingBorrowers() || !!reserving()">
+        <option value="">Choose a user</option>
+        @for (user of borrowers(); track user.id) { <option [value]="user.id" [disabled]="!!reason(reserveBook()?._id || '', user.id)">{{ user.email }}{{ user.name ? ' / ' + user.name : '' }}{{ reason(reserveBook()?._id || '', user.id) ? ' (' + reason(reserveBook()?._id || '', user.id) + ')' : '' }}</option> }
+      </select>
+    }
+
+    <div class="actions">
+      <button type="button" class="secondary" autofocus [disabled]="!!reserving()" (click)="closeReserve()">Cancel</button>
+      @if (reserveBook(); as book) {
+        <button type="button" class="primary" [disabled]="!!reserving() || (auth.user()?.role === 'Admin' && (!borrowerId || loadingBorrowers() || !!borrowerError() || !!reason(book._id, borrowerId)))" (click)="reserve(book)">{{ reserving() ? 'Reserving...' : 'Confirm reservation' }}</button>
+      }
+    </div>
+  </dialog>
+}

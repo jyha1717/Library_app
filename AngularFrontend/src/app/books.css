@@ -1,0 +1,65 @@
+:host { display: block; width: 100%; }
+.heading, .dialog-heading, .actions { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.eyebrow { color: #547463; font-size: 11px; font-weight: 700; letter-spacing: 2px; }
+h1 { font: 40px Georgia, serif; margin: 12px 0; color: #213d32; }
+.intro, .count { color: #68716a; line-height: 1.6; }
+h2 { font-size: 20px; line-height: 1.4; margin: 0; }
+.topics { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.topics li { background: #eaf0e7; color: #3d624e; padding: 5px 10px; border-radius: 20px; font-size: 12px; }
+button { font: inherit; cursor: pointer; border-radius: 8px; padding: 12px 18px; font-size: 14px; }
+.primary { background: #214f41; color: white; border: 1px solid #214f41; }
+.secondary { background: transparent; color: #214f41; border: 1px solid #b9c8bb; }
+button:disabled { opacity: .55; cursor: default; }
+.notice { padding: 35px; background: #fffefb; border: 1px solid #dce3d8; border-radius: 14px; }
+.success { color: #214f41; padding: 14px; background: #e4efe6; border-radius: 8px; }
+dialog { border: 1px solid #dce3d8; border-radius: 16px; padding: 30px; width: min(520px, calc(100vw - 32px)); max-height: 90dvh; color: #293d32; background: #fffefb; }
+dialog::backdrop { background: #14271dc0; }
+.close { border: 0; background: transparent; font-size: 26px; padding: 0 8px; }
+label { display: block; margin: 18px 0 8px; font-size: 14px; font-weight: 600; }
+input, textarea, select { width: 100%; padding: 12px; border: 1px solid #bdcbbf; border-radius: 8px; font: inherit; background: white; }
+textarea { resize: vertical; }
+.help { font-size: 12px; color: #68716a; margin: 0 0 8px; }
+.actions { justify-content: flex-end; margin-top: 24px; }
+.error { color: #9b2929; background: #fff0ee; padding: 12px; border-radius: 8px; }
+:focus-visible { outline: 3px solid #a9c7b8; outline-offset: 3px; }
+@media (max-width: 540px) { .heading { align-items: flex-start; flex-direction: column; margin-bottom: 24px; } h1 { font-size: 32px; } dialog { padding: 22px; } }
+.table-container { width: 100%; overflow-x: auto; border: 1px solid #dce3d8; border-radius: 12px; background: #fffefb; }
+table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+th, td { padding: 18px 20px; border-bottom: 1px solid #e5e9e1; vertical-align: middle; min-width: 150px; overflow-wrap: anywhere; }
+thead th { background: #eaf0e7; font-size: 12px; color: #45624f; white-space: nowrap; }
+tbody th { min-width: 210px; font-weight: 600; }
+tbody tr:last-child > * { border-bottom: 0; }
+tbody tr:hover { background: #f6f8f2; }
+.archive-date { white-space: nowrap; font-size: 13px; }
+.timezone { font-weight: 400; }
+td button { white-space: nowrap; padding: 9px 12px; }
+.archive-toggle { display: flex; align-items: center; gap: 12px; font-size: 16px; }
+.archive-toggle input { width: 20px; height: 20px; accent-color: #214f41; }
+.selected-title { font-weight: 600; overflow-wrap: anywhere; }
+
+.availability-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12px; line-height: 1.6; }
+.green-key { color: #235e36; } .yellow-key { color: #785a0b; } .red-key { color: #953939; }
+tbody tr.copies-available { background: #edf7ee; }
+tbody tr.copies-waiting { background: #fff7db; }
+tbody tr.copies-unavailable { background: #fcecec; }
+tbody tr.copies-available > th { border-left: 4px solid #448b55; }
+tbody tr.copies-waiting > th { border-left: 4px solid #c69920; }
+tbody tr.copies-unavailable > th { border-left: 4px solid #c46666; }
+td button { margin: 3px; }
+
+.heading-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+tbody tr.row-green { background: #edf7ee; }
+tbody tr.row-yellow { background: #fff7db; }
+tbody tr.row-red { background: #fcecec; }
+tbody tr.row-green > th { border-left: 4px solid #448b55; }
+tbody tr.row-yellow > th { border-left: 4px solid #c69920; }
+tbody tr.row-red > th { border-left: 4px solid #c46666; }
+
+.owner-email { white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+
+.status-filter { margin: 0; display: flex; flex-direction: column; gap: 8px; color: #214f41; }
+.status-filter select { width: auto; padding: 10px 12px; }
+
+.catalogue-actions > button { display: block; width: 100%; margin: 0; }
+.catalogue-actions > button + button { margin-top: 8px; }
+tr.notification-read > th, tr.notification-read > td { background: #e5e5e5; }

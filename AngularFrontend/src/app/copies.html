@@ -1,0 +1,31 @@
+<dialog #copiesDialog aria-labelledby="copies-title" (cancel)="cancel($event)" (close)="closed.emit()">
+  <div class="dialog-heading"><h2 id="copies-title">Book copies</h2><button type="button" class="close" aria-label="Close copies" [disabled]="saving() || !!updatingCopy()" (click)="close()">&times;</button></div>
+  <p class="selected-title">{{ book().title }}</p>
+  @if (auth.user()?.role === 'Admin' && !book().archivedAt) {
+    <form class="add-copies" (ngSubmit)="add()" [attr.aria-busy]="saving()">
+      <div><label for="copy-count">Number of new copies</label><input id="copy-count" name="count" type="number" min="1" step="1" required [(ngModel)]="count" [disabled]="saving() || !!updatingCopy()" /></div>
+      <button type="submit" class="primary" [disabled]="!validCount() || saving() || !!updatingCopy() || loading()">{{ saving() ? 'Adding...' : 'Add copies' }}</button>
+    </form>
+    <p class="help">New copies will have Available status.</p>
+  }
+  @if (saveError()) { <p class="error" role="alert">{{ saveError() }}</p> }
+  @if (message()) { <p class="success" role="status">{{ message() }}</p> }
+  <div class="copies-heading"><h3>Copies ({{ visibleCopies().length }})</h3><button type="button" class="secondary" (click)="load()" [disabled]="loading() || saving() || !!updatingCopy()">Refresh copies</button></div>
+  @if (loading()) { <p role="status">Loading copies...</p> }
+  @else if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+  @else {
+    <dl class="copy-breakdown" aria-label="Copies by status">
+      @for (item of breakdown(); track item.status) {
+        <div [attr.data-status]="item.status"><dt>{{ item.label }}</dt><dd>{{ item.count }}</dd></div>
+      }
+    </dl>
+    @if (!visibleCopies().length) { <p>No copies to display for this book.</p> }
+    @else {
+    <div class="table-container" tabindex="0" role="region" aria-label="Copies">
+      <table><thead><tr><th scope="col">Copy ID</th><th scope="col">Status</th><th scope="col">Added at (SGT)</th>@if (auth.user()?.role === 'Admin') { <th scope="col">Actions</th> }</tr></thead>
+        <tbody>@for (copy of visibleCopies(); track copy._id) { <tr><th scope="row" class="copy-id">{{ copy._id }}</th><td>{{ statusLabel(copy.status) }}</td><td class="archive-date">{{ copy.createdAt | date:'dd MMM yyyy, HH:mm':'+0800' }}</td>@if (auth.user()?.role === 'Admin') { <td>@if (!book().archivedAt && copy.status === 'available') { <button type="button" class="secondary" [disabled]="saving() || !!updatingCopy() || loading()" (click)="changeStatus(copy)" [attr.aria-label]="'Withdraw copy ' + copy._id">{{ updatingCopy() === copy._id ? 'Withdrawing...' : 'Withdraw copy' }}</button> } @if (!book().archivedAt && copy.status === 'withdrawn') { <button type="button" class="secondary" [disabled]="saving() || !!updatingCopy() || loading()" (click)="changeStatus(copy, true)" [attr.aria-label]="'Reactivate copy ' + copy._id">{{ updatingCopy() === copy._id ? 'Reactivating...' : 'Reactivate copy' }}</button> }</td> }</tr> }</tbody>
+      </table>
+    </div>
+    }
+  }
+</dialog>

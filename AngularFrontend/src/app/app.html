@@ -1,0 +1,43 @@
+<main class="page">
+  <header class="brand"><span class="brand-mark" aria-hidden="true">D</span> Data4Life <span class="brand-label">LIBRARY</span></header>
+  @if (auth.user(); as user) {
+    <section class="catalogue-shell">
+      <app-library-shell (logout)="logout()"><router-outlet /></app-library-shell>
+    </section>
+  } @else {
+    <div class="login-layout">
+    <section class="card" aria-labelledby="page-title">
+      @if (registering()) {
+        <app-create-user (created)="accountCreated($event)" (cancelled)="registering.set(false)" />
+      } @else {
+      <p class="eyebrow">YOUR NEXT CHAPTER</p>
+      <h1 id="page-title">Welcome back.</h1>
+      <p class="intro">Sign in to your library account.</p>
+      <form #loginForm="ngForm" (ngSubmit)="login(loginForm)" [attr.aria-busy]="busy()">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="text" autocomplete="username" placeholder="you@example.com" [(ngModel)]="email" [disabled]="busy()" />
+        <app-password-field fieldId="password" [(value)]="password" [disabled]="busy()" />
+        @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+        @if (success()) { <p role="status">{{ success() }}</p> }
+        <button class="primary" type="submit" [disabled]="busy()">{{ busy() ? 'Signing in...' : 'Sign in' }}<span aria-hidden="true">&rarr;</span></button>
+        <button class="demo-button create-button" type="button" [disabled]="busy()" (click)="openRegistration()">Create new user</button>
+      </form>
+      }
+    </section>
+    @if (!registering()) {
+    <aside class="demo-accounts" aria-labelledby="demo-title">
+      <p class="eyebrow">QUICK ACCESS</p>
+      <h2 id="demo-title">Demo accounts</h2>
+      <p>Choose an account to sign in instantly.</p>
+      @for (account of demoAccounts; track account.email) {
+        <button type="button" class="demo-button" [disabled]="busy()" (click)="loginDemo(account.email)" [attr.aria-label]="'Sign in as ' + account.name">
+          <span class="demo-name">{{ account.name }} <span class="demo-role">{{ account.role }}</span></span>
+          <span class="demo-email">{{ account.email }}</span>
+        </button>
+      }
+    </aside>
+    }
+    </div>
+  }
+  <footer>A little curiosity goes a long way.</footer>
+</main>

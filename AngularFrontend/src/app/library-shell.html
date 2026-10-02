@@ -1,0 +1,41 @@
+<div class="shell">
+  <nav class="sidebar" aria-label="Main navigation">
+    <p class="nav-label">LIBRARY</p>
+    @if (auth.user()?.role === 'Admin') { <button type="button" (click)="openTime()">Set time</button> }
+    <a class="notifications-link" routerLink="/notifications" routerLinkActive="active" ariaCurrentWhenActive="page"><span>{{ auth.user()?.role === 'Admin' ? 'All notifications' : 'Notifications' }}</span>@if (auth.user()?.role === 'User' && unreadNotifications.count() > 0) { <span class="unread-badge" aria-live="polite" [attr.aria-label]="unreadNotifications.count() + ' unread notifications'">{{ unreadNotifications.count() }}</span> }</a>
+    <a routerLink="/books" routerLinkActive="active" ariaCurrentWhenActive="page">Book catalogue</a>
+    <a routerLink="/loans" routerLinkActive="active" ariaCurrentWhenActive="page">{{ auth.user()?.role === 'Admin' ? 'All loans' : 'My loans' }}</a>
+    <a routerLink="/reservations" routerLinkActive="active" ariaCurrentWhenActive="page">{{ auth.user()?.role === 'Admin' ? 'All reservations' : 'My reservations' }}</a>
+    <a routerLink="/fines" routerLinkActive="active" ariaCurrentWhenActive="page">{{ auth.user()?.role === 'Admin' ? 'All fines' : 'My fines' }}</a>
+    <a routerLink="/history" routerLinkActive="active" ariaCurrentWhenActive="page">{{ auth.user()?.role === 'Admin' ? 'All History' : 'History' }}</a>
+    <a routerLink="/settings" routerLinkActive="active" ariaCurrentWhenActive="page">Settings</a>
+  </nav>
+  <div class="workspace">
+    <header class="session-bar">
+      <span>{{ auth.user()?.email }}</span>
+      <span class="clock" aria-label="Current library time">
+        @if (clockError()) { Time unavailable }
+        @else if (now() !== null) { {{ now() | date:'dd MMM yyyy, HH:mm:ss':'+0800' }} SGT }
+        @else { Loading time... }
+      </span>
+      <button type="button" (click)="logout.emit()">Sign out</button>
+    </header>
+    <ng-content />
+  </div>
+</div>
+@if (auth.user()?.role === 'Admin') {
+  <dialog #timeDialog aria-labelledby="time-title" (cancel)="cancelTime($event)">
+    <div class="dialog-heading"><h2 id="time-title">Set library time</h2><button type="button" aria-label="Close set time" [disabled]="saving()" (click)="closeTime()">&times;</button></div>
+    <p>Enter a future date and time in Singapore time (SGT, UTC+8). This changes the library clock for everyone.</p>
+    @if (loading()) { <p role="status">Loading current time...</p> }
+    <form (ngSubmit)="saveTime()">
+      <div class="time-fields">
+        @for (field of fields; track field.key) {
+          <label [for]="'time-' + field.key">{{ field.label }}<input [id]="'time-' + field.key" [name]="field.key" type="number" step="1" [min]="field.min" [max]="field.max" required [(ngModel)]="values[field.key]" [disabled]="loading() || saving()" /></label>
+        }
+      </div>
+      @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+      <div class="actions"><button type="button" (click)="prefill()" [disabled]="loading() || saving()">Reload current time</button><button type="submit" class="primary" [disabled]="loading() || saving() || targetTime() === null">{{ saving() ? 'Saving...' : 'Set time' }}</button></div>
+    </form>
+  </dialog>
+}

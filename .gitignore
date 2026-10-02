@@ -1,0 +1,21 @@
+# Local backups and conversation export
+/.Archive/
+/ChatHistory.txt
+
+# Company-provided assignment
+/Take Home Assignment.pdf
+
+# Local environment secrets (keep a credential-free example)
+.env
+.env.*
+!.env.example
+
+# Python caches and virtual environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Angular cache and Node dependencies
+*/.angular/
+*/node_modules/
